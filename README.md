@@ -11,7 +11,7 @@ Following is a list of several source files and folders.
     ├── ipDB                   # folder for input files
     └── meas                   # folder for output files
 
-## Install
+## Installing
 
 ```bash
 ./configure
@@ -24,7 +24,9 @@ make
 flipr -i ipDB/addr_list.txt -o meas/output.txt -Z -r send_rate
 ```
 
+`addr_list.txt` contains a list of target /24 prefixes, in the form of *a.b.c.0*. Flipr scans the space of each target /24 prefix until a responsive address is found.
 
+`output.txt` contains the measurement results, in the form of `address`, `message_type`, `timestamp`, `data`. When `message_type` is 0 (i.e., RTT), `data` is a collection of RTT samples, `rtt_1, ..., rtt_n`. When `message_type` is 2 (i.e., hop-by-hop path), `data` is the list of intermediate hops along the path from the source to the destination, `hop_1, ..., hop_n`, where `hop_i` is a 4-element tuple containing the measurement results between the source and the *i-th* hop, `(hop addr, forward ttl, return ttl, rtt)`.
 
 ## Related papers
 - [**(SIGMETRICS 2020) Latency Imbalance Among Internet Load-Balanced Paths: A Cloud-Centric View**]
