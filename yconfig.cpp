@@ -14,7 +14,7 @@ static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"input", required_argument, NULL, 'i'},
     {"interface", required_argument, NULL, 'I'},
-    {"mode", required_argument, NULL, 'm'},
+    {"debug_mode", no_argument, NULL, 'd'},
     {"dstmac", required_argument, NULL, 'M'},
     {"neighborhood", required_argument, NULL, 'n'},
     {"output", required_argument, NULL, 'o'},
