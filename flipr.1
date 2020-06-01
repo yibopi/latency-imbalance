@@ -1,0 +1,111 @@
+.\"
+.\" yarrp.1
+.\"
+.\" Author: Robert Beverly <rbeverly@cmand.org>
+.\"
+.\" Copyright (c) 2016-2017 Robert Beverly
+.\"                    All rights reserved
+.\"
+.\"
+.Dd May 24, 2017
+.Dt YARRP 1
+.Os
+.Sh NAME
+.Nm yarrp
+.Nd high-speed active topology prober
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Fl hvQZ
+.Op Fl b Ar bgp_rib
+.Op Fl c Ar trace_count
+.Op Fl i Ar target_ip_file
+.Op Fl m Ar max_ttl
+.Op Fl n Ar neighborhood_ttl
+.Op Fl o Ar outfile
+.Op Fl r Ar rate
+.Op Fl I Ar interface
+.Op Fl S Ar rand_seed
+.Op Fl p Ar dst_port
+.Op Fl t Ar type
+.Op Fl M Ar dst_mac
+.Op Fl G Ar src_mac
+.Op Ar subnet(s)
+.Sh DESCRIPTION
+.Nm
+(Yelling at Random Routers Progressively) is a high-speed active
+traceroute-style topology discovery tool.  To achieve its high probing
+rates, yarrp is stateless and randomizes its probing and TTL
+order.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl h
+prints a list of command line options and a synopsis of each.
+.It Fl v
+enables verbose output
+.It Fl Q
+set target list to all 2^32 addresses of the entire Internet (default: off)
+.It Fl Z
+must be set for 
+.Nm 
+to send probes (default: test mode)
+.It Fl b Ar bgp_rib
+read BGP RIB (in Potaroo text format)
+.It Fl I Ar interface
+network interface to use, required for IPv6
+.It Fl M Ar dst_mac
+MAC address of gateway router, required only if auto discovery fails
+.It Fl M Ar src_mac
+MAC address of source, required only if auto discovery fails
+.It Fl c Ar trace_count
+set number of traces to issue (default: unlimited)
+.It Fl i Ar target_ip_file
+list (one-per line) of IP targets
+.It Fl m Ar max_ttl
+set maximum TTL (only valid when using target_ip_file) (default: 32)
+.It Fl n Ar neighborhood_ttl
+enable neighborhood enhancement and set local neighborhood TTL
+.It Fl o Ar outfile
+output ytr file for probing results
+.It Fl r Ar rate
+set packet per second probing rate (default: 10pps)
+.It Fl S Ar rand_seed
+set permutation random seed
+.It Fl p Ar dst_port
+use specified transport destination port (default: 80)
+.It Fl t Ar tr_type
+set traceroute probe type, one of: TCP_ACK, TCP_SYN, UDP, ICMP6, UDP6, TCP6_SYN, TCP6_ACK (default: TCP_ACK)
+.El
+.Sh EXAMPLES
+The command:
+.Pp
+.in +.3i
+yarrp -i targets -o test.yrp -r 100 -Z
+.in -.3i
+.Pp
+will send topology probes in a randomly-permuted order to the set of IP 
+targets in file targets at a rate of 100pps, and write the results to
+the file test.yrp.
+.Pp
+The command:
+.Pp
+.in +.3i
+yarrp -t UDP6 -I eth0 -i targets6 -o test6.yrp -Z
+.in -.3i
+.Pp
+will send IPv6 UDP topology probes in a randomly-permuted order to the set of
+IP targets in file targets6, and write the results to the file test6.yrp.
+.Pp
+.in -.5i
+.Sh SEE ALSO
+.Xr yrp2warts.py 1
+.Rs
+.%A "R. Beverly"
+.%T "Yarrp'ing the Internet: Randomized High-Speed Active Topology Discovery"
+.%O "Proc. ACM/SIGCOMM Internet Measurement Conference 2016"
+.Re
+.Sh AUTHORS
+.Nm
+is written by Robert Beverly <rbeverly@cmand.org>.  Ionut Luculescu contributed
+support for IPv4 UDP probing.  Eric Gaston contributed support for IPv6 probing.

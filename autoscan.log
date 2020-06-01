@@ -1,0 +1,44 @@
+autoscan: warning: missing AC_CHECK_FUNCS([gettimeofday]) wanted by: 
+	listener.cpp:127
+	icmp.cpp:12
+	scheduler.cpp:6
+	stats.h:8
+	stats.h:14
+	stats.h:24
+	trace.cpp:20
+	trace.cpp:25
+	trace.cpp:60
+autoscan: warning: missing AC_CHECK_FUNCS([strchr]) wanted by: 
+	patricia.cpp:240
+	patricia.cpp:253
+autoscan: warning: missing AC_CHECK_FUNCS([strdup]) wanted by: 
+	subnet.cpp:53
+autoscan: warning: missing AC_CHECK_FUNCS([strtol]) wanted by: 
+	yconfig.cpp:56
+	yconfig.cpp:59
+	yconfig.cpp:68
+	yconfig.cpp:77
+	yconfig.cpp:86
+	yconfig.cpp:89
+	yconfig.cpp:92
+autoscan: warning: missing AC_CHECK_FUNCS([strtoul]) wanted by: 
+	yconfig.cpp:34
+	yconfig.cpp:36
+autoscan: warning: missing AC_CHECK_HEADERS([stddef.h]) wanted by: 
+	patricia.cpp:11
+autoscan: warning: missing AC_CHECK_HEADERS([sys/ioctl.h]) wanted by: 
+	mac.h:12
+autoscan: warning: missing AC_CHECK_HEADERS([sys/time.h]) wanted by: 
+	yarrp.h:52
+autoscan: warning: missing AC_FUNC_MALLOC wanted by: 
+	trace6.cpp:34
+	yconfig.cpp:33
+	yconfig.cpp:131
+autoscan: warning: missing AC_TYPE_INT32_T wanted by: 
+	ttlhisto.h:18
+	ttlhisto.h:42
+	ttlhisto.h:81
+	status.cpp:12
+	status.cpp:79
+	yarrp.h:99
+	util.cpp:55

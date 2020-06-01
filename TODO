@@ -1,0 +1,5 @@
+- Fix neighbor discovery for IPv6
+- Fix pps limits in Yarrp
+- Talk about using /64 source to do ipv6 enconding, but how that b0rks 
+  paris tr.
+- Talk about encoding into traffic class + flow label
