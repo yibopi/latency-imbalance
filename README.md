@@ -3,7 +3,7 @@
 Flipr is a fast probing tool to measure latency imbalance from a designated prober to Internet IPv4 addresses at scale. Flipr is built on [Yarrp](https://www.cmand.org/yarrp/) with 1000+ additional lines of code added for packet scheduling and processing. We used Flipr to collect latency imbalance from data centers in 14 cities around the globe to 3M /24 prefixes. The dataset is made available at [Google Drive](https://drive.google.com/drive/folders/195oDrNZNk9N9Kbw69sdf9oFa5WujZXuW?usp=sharing).
 
 ## Folder Structure
-Following is a list of several important source files and folders.
+Following is a list of several source files and folders.
 
     .
     ├── flipr.cpp              # main function
@@ -17,6 +17,14 @@ Following is a list of several important source files and folders.
 ./configure
 make
 ```
+
+## Running
+
+```
+flipr -i ipDB/addr_list.txt -o meas/output.txt -Z -r send_rate
+```
+
+
 
 ## Related papers
 - [**(SIGMETRICS 2020) Latency Imbalance Among Internet Load-Balanced Paths: A Cloud-Centric View**]
