@@ -1,2 +1,4 @@
 ipDB/target.txt
 .deps/
+.vscode/
+.gitignore
