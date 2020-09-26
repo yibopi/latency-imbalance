@@ -12,20 +12,24 @@ Traceroute::Traceroute(YarrpConfig *_config) : config(_config), tree(NULL)
     // dstport = config->dstport;
 
 	// load all possible /24 blocks
-    int cap = config->rate;
-	sch = new Scheduler(config->inlist, config->output, cap);
+	sch = new Scheduler(config->inlist, 
+                        config->output, 
+                        config->rate, 
+                        config->lasthop,
+                        config->scan,
+                        config->fastmode);
 
     pktid = 0;
 
     if (config->ttl_neighborhood)
 		initHisto(config->ttl_neighborhood);
     gettimeofday(&start, NULL);
-    cout << ">> Traceroute engine started at: " << start.tv_sec << "." << start.tv_usec << endl;
+    // cout << ">> Traceroute engine started at: " << start.tv_sec << "." << start.tv_usec << endl;
 }
 
 Traceroute::~Traceroute() {
     gettimeofday(&start, NULL);
-    cout << ">> Traceroute engine stopped at: " << start.tv_sec << "." << start.tv_usec << endl;
+    // cout << ">> Traceroute engine stopped at: " << start.tv_sec << "." << start.tv_usec << endl;
     fflush(NULL);
     pthread_cancel(recv_thread);
     //if (out)
@@ -130,13 +134,13 @@ void
 Traceroute::openOutput(const char *src) {
     cout << ">> Output: " << config->output << endl;
     out = fopen(config->output, "a");
-    fprintf(out, "# yarrp v%s\n", VERSION);
+    fprintf(out, "# flipr v%s\n", VERSION);
     fprintf(out, "# Started: %s", ctime(&(start.tv_sec)));
     fprintf(out, "# Source: %s\n", src);
     fprintf(out, "# TraceType: %d Count: %d Rate: %u\n", 
             pktType, config->count, config->rate);
     fprintf(out, "# Rand: %d Nbrh: %d Entire: %d BGP: %s Fillmode: %d\n", 
-         config->random_scan, config->ttl_neighborhood, 
+         config->scan, config->ttl_neighborhood, 
          config->entire, config->bgpfile, config->fillmode);
     if (config->coarse)
         fprintf(out, "# RTT granularity: ms\n");

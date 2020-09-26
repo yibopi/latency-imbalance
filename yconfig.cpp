@@ -26,6 +26,8 @@ static struct option long_options[] = {
     {"type", required_argument, NULL, 't'},
     {"verbose", no_argument, NULL, 'v'},
     {"real", no_argument, NULL, 'Z'},
+    {"lasthop", no_argument, NULL, 'l'},
+    {"fastprobe", no_argument, NULL, 'f'},
     {NULL, 0, NULL, 0},
 };
 
@@ -42,88 +44,94 @@ YarrpConfig::parse_opts(int argc, char **argv) {
     int c, opt_index;
     char *endptr;
 
-    cout << "yarrp v" << VERSION << endl;
+    cout << "flipr v" << VERSION << endl;
     type = TR_TCP_ACK;
-    while (-1 != (c = getopt_long(argc, argv, "b:c:CF:G:hi:I:d:M:n:o:p:Qr:sS:t:vZ", long_options, &opt_index))) {
+    while (-1 != (c = getopt_long(argc, argv, "b:c:CF:G:hi:I:dM:n:o:p:Qr:sS:t:vZl", long_options, &opt_index))) {
         switch (c) {
-        case 'b':
-            bgpfile = optarg;
-            break;
-        case 'C':
-            coarse = true;
-            break;
-        case 'c':
-            count = strtol(optarg, &endptr, 10);
-            break;
-        case 'F':
-            fillmode = strtol(optarg, &endptr, 10);
-            break;
-        case 'i':
-            inlist = optarg;
-            break;
-        case 's':
-            random_scan = false;
-            break;
-        case 'S':
-            seed = strtol(optarg, &endptr, 10);
-            break;
-        case 'Z':
-            testing = false;
-            break;
-        case 'Q':
-            entire = true;
-            break;
-        case 'n':
-            ttl_neighborhood = strtol(optarg, &endptr, 10);
-            break;
-        case 'v':
-            verbose++;
-            break;
-        case 'o':
-            output = optarg;
-            break;
-        case 'p':
-            dstport = strtol(optarg, &endptr, 10);
-            break;
-        case 'd':
-            debug_mode = strtol(optarg, &endptr, 10);
-            break;
-        case 'r':
-            rate = strtol(optarg, &endptr, 10);
-            break;
-        case 'I':
-            int_name = optarg;
-            break;
-        case 'M':
-            dstmac = read_mac(optarg);
-            break;
-        case 'G':
-            srcmac = read_mac(optarg);
-            break;
-        case 't':
-            if (strcmp(optarg, "ICMP6") == 0) {
-                ipv6 = true;
-                type = TR_ICMP6;
-            } else if(strcmp(optarg, "UDP6") == 0) {
-                ipv6 = true;
-                type = TR_UDP6;
-            } else if(strcmp(optarg, "TCP6_SYN") == 0) {
-                ipv6 = true;
-                type = TR_TCP6_SYN;
-            } else if(strcmp(optarg, "TCP6_ACK") == 0) {
-                ipv6 = true;
-                type = TR_TCP6_ACK;
-            } else if(strcmp(optarg, "ICMP") == 0) {
-                fatal("ICMP4 unsupported.");
-            } else if(strcmp(optarg, "UDP") == 0) {
-                type = TR_UDP;
-            } else if(strcmp(optarg, "TCP_SYN") == 0) {
-                type = TR_TCP_SYN;
-            }
-            break;
-        case 'h':
-        default:
-            usage(argv[0]);
+            case 'b':
+                bgpfile = optarg;
+                break;
+            case 'C':
+                coarse = true;
+                break;
+            case 'c':
+                count = strtol(optarg, &endptr, 10);
+                break;
+            case 'F':
+                fillmode = strtol(optarg, &endptr, 10);
+                break;
+            case 'f':
+                fastmode = true;
+                break;
+            case 'i':
+                inlist = optarg;
+                break;
+            case 's':
+                scan = false;
+                break;
+            case 'S':
+                seed = strtol(optarg, &endptr, 10);
+                break;
+            case 'Z':
+                testing = false;
+                break;
+            case 'Q':
+                entire = true;
+                break;
+            case 'n':
+                ttl_neighborhood = strtol(optarg, &endptr, 10);
+                break;
+            case 'v':
+                verbose++;
+                break;
+            case 'o':
+                output = optarg;
+                break;
+            case 'p':
+                dstport = strtol(optarg, &endptr, 10);
+                break;
+            case 'd':
+                debug_mode = true;
+                break;
+            case 'r':
+                rate = strtol(optarg, &endptr, 10);
+                break;
+            case 'I':
+                int_name = optarg;
+                break;
+            case 'M':
+                dstmac = read_mac(optarg);
+                break;
+            case 'G':
+                srcmac = read_mac(optarg);
+                break;
+            case 'l':
+                lasthop = true;
+                break;
+            case 't':
+                if (strcmp(optarg, "ICMP6") == 0) {
+                    ipv6 = true;
+                    type = TR_ICMP6;
+                } else if(strcmp(optarg, "UDP6") == 0) {
+                    ipv6 = true;
+                    type = TR_UDP6;
+                } else if(strcmp(optarg, "TCP6_SYN") == 0) {
+                    ipv6 = true;
+                    type = TR_TCP6_SYN;
+                } else if(strcmp(optarg, "TCP6_ACK") == 0) {
+                    ipv6 = true;
+                    type = TR_TCP6_ACK;
+                } else if(strcmp(optarg, "ICMP") == 0) {
+                    fatal("ICMP4 unsupported.");
+                } else if(strcmp(optarg, "UDP") == 0) {
+                    type = TR_UDP;
+                } else if(strcmp(optarg, "TCP_SYN") == 0) {
+                    type = TR_TCP_SYN;
+                }
+                break;
+            case 'h':
+            default:
+                usage(argv[0]);
         }
     }
     /* set default output file, if not set */
@@ -146,9 +154,9 @@ YarrpConfig::usage(char *prog) {
     << "  -c, --count             Probes to issue (default: unlimited)" << endl
 //    << "  -C, --coarse            Coarse ms timestamps (default: us)" << endl
 //    << "  -F, --fillmode        Fillmode past maxttl (default: 0)" << endl
-    << "  -r, --rate              Scan rate in pps (default: 10)" << endl
+    << "  -r, --rate              Scan rate in pps (default: 2000)" << endl
     << "  -s, --sequential        Scan sequentially (default: random)" << endl
-    << "  -i, --input             Input target file" << endl
+    << "  -i, --input             Input target (address, prefix or file)" << endl
     << "  -o, --output            Output file (default: output.yrp)" << endl
     << "  -v, --verbose           verbose (default: off)" << endl
     << "  -m, --mode              Mode" << endl

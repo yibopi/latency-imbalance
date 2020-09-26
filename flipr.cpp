@@ -1,4 +1,5 @@
 #include "flipr.h"
+#include <iomanip>
 
 void loop(YarrpConfig *config, Traceroute *trace, Patricia *tree, Stats *stats) {
     struct in_addr target;
@@ -110,33 +111,6 @@ main(int argc, char **argv) {
             trace = new Traceroute4(&config);
     }
 
-    /* Init target list (individual IPs, *NOT* subnets) from input file */
-    /*
-	IPList *iplist = NULL;
-    if (config.inlist) {
-      if (config.ipv6) 
-        iplist = new IPList6(config.maxttl, config.random_scan);
-      else
-        iplist = new IPList4(config.maxttl, config.random_scan);
-      // randomize permutation key
-      iplist->setkey(config.seed);
-      iplist->read(config.inlist);
-    }
-	*/
-
-    /* Initialize subnet list and add subnets from args */
-    // SubnetList *subnetlist = NULL;
-    // if (not config.entire and not config.inlist) {
-    //     if (config.random_scan) 
-    //         subnetlist = new RandomSubnetList();
-    //     else
-    //         subnetlist = new SubnetList();
-    //     for (int i = optind; i < argc; i++)
-    //         subnetlist->add_subnet(argv[i]);
-    //     if (0 == subnetlist->count())
-    //         config.usage(argv[0]);
-    // }
-
     /* Initialize radix trie, if using */
     Patricia *tree = NULL;
     if (config.bgpfile) {
@@ -159,6 +133,12 @@ main(int argc, char **argv) {
     cout << ">> Probing begins." << endl;
     Stats *stats = new Stats();
     trace->addStats(stats);
+
+    cout << left << setw(20) << "Destination" 
+         << left << setw(30) << "Status" 
+         << left << setw(30) << "Latency Imbalance"
+         << left << setw(30) << "Imbalanced Regions (dvrg, cvrg, imbl, type)" << endl;
+
     if (config.inlist) {
         // Normal mode of operation, using individual IPs from input file -i
         loop(&config, trace, tree, stats);

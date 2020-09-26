@@ -13,13 +13,14 @@
 using namespace std;
 
 #define TCP_FREEZE_TIME 3
-#define ICMP_FREEZE_TIME 3
-#define UDP_FREEZE_TIME 3
-#define TIMEOUT MIN(TCP_FREEZE_TIME, MIN(UDP_FREEZE_TIME, ICMP_FREEZE_TIME))
+#define ICMP_FREEZE_TIME 1
+#define UDP_FREEZE_TIME_SHORT 0.2
+#define UDP_FREEZE_TIME_LONG 3
+#define TIMEOUT MIN(TCP_FREEZE_TIME, MIN(UDP_FREEZE_TIME_LONG, ICMP_FREEZE_TIME))
 
-#define NUM_EXPLR_E2E 30 // std: 30
+#define NUM_EXPLR_E2E 5 // std: 30
 #define NUM_REPEAT_E2E 6 // std: 6
-#define MAX_PROBES_SENT 90 // NUM_EXPLR_E2E + 10 * NUM_E2E_REPEAT
+#define MAX_PROBES_SENT 90 // NUM_EXPLR_E2E + 10 * NUM_REPEAT_E2E
 #define NUM_PKTLB_EXPLR 6  // std: 6
 #define NUM_ALIAS_RESL 3   // 1000
 
@@ -151,27 +152,15 @@ struct Task {
 	Task(uint32_t ip, double time): id(ip), startTime(time) {}
 };
 
-// struct IPState {
-// 	uint8_t task;
-// 	uint16_t ptr, cnt;
-// 	uint16_t numProbe;
-//     uint16_t minrtt, maxrtt;
-//     vector<Flow> recvbuf;
-// 	vector<Flow> flows;
-// 	IPState(): numProbe(0), cnt(0), ptr(0), task(CHK_RESPONSE),
-//                minrtt(0), maxrtt(0) {}
-// };
-
 struct IPState {
     uint8_t task;
-    bool found;
 	uint16_t ptr, cnt;
 	uint16_t numProbe;
     uint32_t lastHopRouter;
     vector<Flow> recvbuf, flows;
+    string output;
 
 	IPState(): task(CHK_RESPONSE), 
-               found(false),
                ptr(0),
                cnt(0),
                numProbe(0),
@@ -180,7 +169,7 @@ struct IPState {
 
 class Scheduler {
 public:
-	Scheduler(char *in, char *out, int _cap);
+	Scheduler(char *in, char *out, int _cap, bool lasthop, bool scan, bool fastmode);
     ~Scheduler();
 
     SCAN_MODE mode;
@@ -209,11 +198,11 @@ public:
     MSG_TYPE chkRouterLBType(uint32_t, IPState *, vector<Flow> &, PKT_TYPE &);
     //MSG_TYPE delayVarRel(IPState *, PfxState *, uint32_t &, vector<Flow> &, PKT_TYPE &);
 
-
 	unordered_map<uint32_t, IPState> ipStateDB;
     unordered_map<uint32_t, uint16_t> ip2id;
 
-    ifstream inlist;
+    bool lasthop, scan, fastmode;
+    char *input;
     ofstream outlist;
 
     bool inBlacklist(uint32_t &);

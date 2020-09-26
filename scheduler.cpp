@@ -4,6 +4,7 @@
 #include <time.h>
 #include <iomanip>
 #include <future>
+#include <regex>
 
 #define NUM_PKT_TYPE 4
 #define NUM_REPEAT 6
@@ -23,17 +24,86 @@
 pthread_rwlock_t ws_lock;
 
 ////////////////////////////////////////
+string decToDot(uint32_t ip) {
+    struct in_addr addr;
+    addr.s_addr = htonl(ip);
+    string ipstr(inet_ntoa(addr));
+    return ipstr;
+}
 
-Scheduler::Scheduler(char *in, char *out, int _cap) {
-    inlist.open(in);
+uint32_t addressGenerator(char *in) {
+    in_addr addr;
+    static int inputType = -1;
+    static uint32_t target;
+    static uint32_t endIP;
+    static ifstream inlist;
+    string line;
+
+    if (inputType == 1) {
+        if (target + 256 < endIP) {
+            target += 256;
+            return target + 1;
+        } else {
+            return 0;
+        }
+    } else if (inputType == 2) {
+        return 0;
+    } else if (inputType == 3) {
+        getline(inlist, line);
+        if (line.empty()) { return 0; }
+
+		assert(inet_aton(line.c_str(), &addr) == 1);
+		target = ntohl(addr.s_addr);
+        return target;        
+    }
+
+    smatch m;
+    string s(in);
+    if (regex_search(s, m, regex("([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)\\/([0-9]+)"))) {
+        inputType = 1;
+        
+        string baseIP = m[1].str();
+		assert(inet_aton(baseIP.c_str(), &addr) == 1);
+		target = ntohl(addr.s_addr);
+        
+        int zeros = 32 - stoi(m[2]);
+        target = ((target >> zeros) << zeros);
+        endIP  = target + (1 << zeros);
+
+    } else if (regex_search(s, m, regex("[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+"))) {
+        inputType = 2;
+
+        string baseIP = m[0].str();
+		assert(inet_aton(baseIP.c_str(), &addr) == 1);
+        target = ntohl(addr.s_addr);
+
+    } else {
+        inputType = 3;
+
+        inlist.open(in);
+
+        getline(inlist, line);
+        if (line.empty()) { return 0; }
+
+		assert(inet_aton(line.c_str(), &addr) == 1);
+		target = ntohl(addr.s_addr) + 1;
+    }
+    
+    return target;
+}
+
+Scheduler::Scheduler(char *in, char *out, int _cap, bool _lasthop, bool _scan, bool _fastmode) {
     outlist.open(out);
     outlist << std::fixed << std::setprecision(2);
+    input = in;
     cap = _cap; 
+    lasthop = _lasthop;
+    scan = _scan;
+    fastmode = _fastmode;
     srand(time(NULL));
 }
 
 Scheduler::~Scheduler() {
-    inlist.close();
     outlist.close();
 }
 
@@ -41,23 +111,6 @@ void
 Scheduler::updateHistDB(uint32_t &ip, uint16_t &ipid) {
     histDB[ip].ipid = (ipid) ? true : false;
 }
-
-/*
-void
-PfxState::setAlert(bool _alert) {
-    pthread_rwlock_wrlock(&lock);
-    alert = _alert;
-    pthread_rwlock_unlock(&lock);
-}
-
-bool
-PfxState::isAlert() {
-    pthread_rwlock_rdlock(&lock);
-    bool ret = alert;
-    pthread_rwlock_rdlock(&lock);
-    return ret;
-}
-*/
 
 double getCurrTime() {
 	struct timeval tv;
@@ -74,6 +127,50 @@ void printFlow(vector<Flow> flows) {
         }
     }
 	printf("\n");
+}
+
+string formatOutput(uint32_t dst, uint32_t lasthop, MSG_TYPE msgType, float imbl, vector<LBReg> regs) {
+    stringstream ss;
+    string empty = "---------------";
+    ss << left << setw(20) << decToDot(dst);
+    ss << left << setw(30);
+    if (msgType == NO_RESPONSE) {
+        if (lasthop && imbl != -1) {
+            ss << "Proxy" << ":" << decToDot(lasthop);
+        } else if (lasthop && imbl == -1) {
+            ss << "Unable to find a proxy";
+        } else {
+            ss << "No response from dst";
+        }
+    } else if (msgType == DIFF_FWD_FLOW) {
+        ss << "Per-packet balancer";
+    } else if (msgType == DIFF_RVR_FLOW) {
+        ss << "Return paths differ";
+    } else {
+        ss << "Normal";
+    }
+    
+    ss << left << setw(30);
+    if (imbl != -1) {
+        ss << fixed << setprecision(1) << imbl;
+    } else {
+        ss << empty;
+    }
+    
+    if (!regs.empty()) {
+        for (int i = 0; i < regs.size(); i++) {
+            ss << left << "(" << decToDot(regs[i].start.ip) << ", " << decToDot(regs[i].end.ip) << ", " 
+               << fixed << setprecision(1) << regs[i].link.val << ")";
+            if (i < regs.size() - 1) {
+                ss << ", ";
+            }
+        }
+        ss << endl;
+    } else {
+        ss << empty << endl;
+    }
+
+    return ss.str();
 }
 
 bool 
@@ -455,19 +552,14 @@ Scheduler::pathHopEst(uint32_t dst,
 void Scheduler::populateTaskQueue() {
 
 	static int ipCount = 0;
-	static in_addr addr;
 	uint32_t target;
-	string line;
     double startTime;
 
 	while (true) {
         if (taskQueue.size() >= cap) break;
 
-        getline(inlist, line);
-        if (line.empty()) { return; }
-
-		assert(inet_aton(line.c_str(), &addr) == 1);
-		target = ntohl(addr.s_addr);
+        target = addressGenerator(input);
+        if (target == 0) return;
         
         // lock
         pthread_rwlock_wrlock(&gLock);
@@ -475,7 +567,7 @@ void Scheduler::populateTaskQueue() {
 		if (inBlacklist(target) > 0) continue;
 
         if (ipStateDB.count(target) == 0) {
-			double startTime = getCurrTime() + ((double)rand() / RAND_MAX) * UDP_FREEZE_TIME;
+			double startTime = getCurrTime() + ((double)rand() / RAND_MAX) * UDP_FREEZE_TIME_LONG;
 			ipStateDB[target] = IPState();
             taskQueue.push(Task(target, startTime));
         }
@@ -522,30 +614,24 @@ Scheduler::chkResponse(uint32_t ip,
 {
     uint16_t sport, dport;
 
-    // to be modified
-    if (ipState->numProbe > 10) {
-        ipState->numProbe = ipState->cnt = 0;
-        return PROBE_END;
-    }
-
-    if (ipState->cnt > ipState->flows.size()) {
-        ipState->cnt = 0;
+    if (ipState->flows.size()) {
+        ipState->cnt = ipState->numProbe = 0;
         ipState->flows.clear();
-        return NO_RESPONSE;
-    }
 
-    if (ipState->cnt < numType) {
+        return PHASE_DONE;
+    } else if (ipState->numProbe < numType) {
     	sport = randPort(MIN_PORT, MAX_PORT);
 		dport = randPort(MIN_PORT, MAX_PORT);
         pkts = {singlePkt(ip, sport, dport, UINT8_MAX, pktType)};
-    	ipState->cnt++;
         ipState->numProbe++;
-        return CONTINUE;
-    }
 
-    ipState->cnt = ipState->numProbe = 0;
-    ipState->flows.clear();
-    return PHASE_DONE;
+        return CONTINUE;
+    } else {
+        ipState->numProbe = 0;
+        ipState->flows.clear();
+
+        return NO_RESPONSE;
+    }
 }
 
 MSG_TYPE
@@ -1116,7 +1202,8 @@ Scheduler::findLastRouter(uint32_t id,
     const int numNeighExplr = 3;
 
     // [0, numNeighExplr] has numNeighExplr + 1 elements
-    if (ipState->numProbe >= MAX_HOPS + NUM_EXPLR_E2E * (numNeighExplr + 1)) {
+    if (ipState->numProbe > MAX_HOPS + 2 * NUM_EXPLR_E2E * (numNeighExplr + 1)) {
+        cout << formatOutput(id, ipState->lastHopRouter, NO_RESPONSE, -1, {});
         ipState->numProbe = ipState->cnt = ipState->ptr = 0;
         return PROBE_END;
     }
@@ -1130,23 +1217,23 @@ Scheduler::findLastRouter(uint32_t id,
 
     if (flows.size() == 0 && recvbuf.size() != 0) {
 
-        // check if router has been probed
-        if (ipState->lastHopRouter == 0)
-            ipState->lastHopRouter = routerip;
+        ipState->lastHopRouter = routerip;
 
         if (histDB[routerip].probed) {
             return PROBE_END;
         }
 
         flows.push_back(recvbuf.back());
+        ipState->ptr = 1;
+        routerFound = true;
 
-    } else if (flows.size() != 0 && !ipState->found) {
-        if (recvbuf.size() == 0 || (routerip && ipState->lastHopRouter != routerip)) {
-            ipState->found = routerFound = true;
-            flows.back().fwdttl = ipState->ptr + 2;
-            // ptr is the index of next flow
-            ipState->ptr = 1; 
-        }
+    // } else if (flows.size() != 0 && !ipState->found) {
+    //     if (recvbuf.size() == 0 || (routerip && ipState->lastHopRouter != routerip)) {
+    //         ipState->found = routerFound = true;
+    //         flows.back().fwdttl = ipState->ptr + 2;
+    //         // ptr is the index of next flow
+    //         ipState->ptr = 1; 
+    //     }
     } else {
          // add recvbuf to flows
         for (auto &f : ipState->recvbuf) {
@@ -1166,9 +1253,9 @@ Scheduler::findLastRouter(uint32_t id,
     recvbuf.clear();
 
     //printFlow(flows);
-    //cout << ipState->ptr << " " << ipState->cnt << " " << routerFound << " " << ipState->numProbe << endl;
+    // cout << ipState->ptr << " " << ipState->cnt << " " << routerFound << " " << ipState->numProbe << endl;
 
-    if (!ipState->found) {
+    if (!ipState->lastHopRouter) {
         if (ipState->ptr == 0) {
             return PROBE_END;
         }
@@ -1231,6 +1318,7 @@ Scheduler::LBRegScan(IPState *ipState,
 {
     MSG_TYPE msgType;
     double currTime = getCurrTime();
+    double freeze_time = (fastmode) ? UDP_FREEZE_TIME_SHORT : UDP_FREEZE_TIME_LONG;
 
     if (inBlacklist(id)) { 
         return PROBE_END;
@@ -1238,7 +1326,6 @@ Scheduler::LBRegScan(IPState *ipState,
 
     // cout << "task:" << (int)ipState->task << endl;
 
-    // ipState->task = UPDATE_MAP;
     if (ipState->task == CHK_RESPONSE) {
         int i;
         uint32_t newid;
@@ -1247,12 +1334,19 @@ Scheduler::LBRegScan(IPState *ipState,
 
         if (msgType == NO_RESPONSE) {
 
-            if (id - IP2Pfx(id) == UINT8_MAX) {
+            if (!lasthop && !scan) {
+                cout << formatOutput(id, 0, msgType, -1, {});
+                return PROBE_END;
+            }
+
+            if ((id - IP2Pfx(id) == UINT8_MAX && scan) || !scan) {
+
+                if (!lasthop) return PROBE_END;
 
                 // log results
                 async(std::launch::async, logRes, id, ipState, OUT_FIREWALL, std::ref(outlist));
 
-                ipState->cnt = 0;
+                ipState->cnt = ipState->numProbe = 0;
                 ipState->ptr = MAX_HOPS;
                 ipState->task = FIND_LAST_ROUTER;
                 addToQueue(Task(id, currTime));
@@ -1275,7 +1369,7 @@ Scheduler::LBRegScan(IPState *ipState,
 			ipState->task = PATH_ENUM_E2E;
         } 
         if (msgType == CONTINUE) {
-			addToQueue(Task(id, currTime + UDP_FREEZE_TIME));
+			addToQueue(Task(id, currTime + freeze_time));
         }
     } else if (ipState->task == FIND_LAST_ROUTER) {
         msgType = findLastRouter(id, ipState, TR_UDP, pkts);
@@ -1288,7 +1382,7 @@ Scheduler::LBRegScan(IPState *ipState,
 
             addToQueue(Task(id, currTime));
         } else if (msgType == CONTINUE) {
-            addToQueue(Task(id, currTime + UDP_FREEZE_TIME));
+            addToQueue(Task(id, currTime + freeze_time));
         }
     } else if (ipState->task == PATH_ENUM_E2E) {
 		msgType = pathEnumE2E(id, ipState, NUM_EXPLR_E2E, TR_UDP, pkts);
@@ -1304,7 +1398,7 @@ Scheduler::LBRegScan(IPState *ipState,
             bool randSel = (rand() % 100 < 20);
             bool largeDiff = ((maxRTT - minRTT) >= RANGE_THRES);
 
-			if (largeDiff || randSel) {
+			if (largeDiff) {
                 ipState->flows[0].hops.clear();
                 ipState->flows[1].hops.clear();
                 ipState->flows.erase(ipState->flows.begin() + 2, ipState->flows.end());
@@ -1329,7 +1423,7 @@ Scheduler::LBRegScan(IPState *ipState,
                 msgType = PROBE_END;
 			}
 		} else if (msgType == CONTINUE) {
-			addToQueue(Task(id, currTime + UDP_FREEZE_TIME));
+			addToQueue(Task(id, currTime + freeze_time));
 		}
 	} else if (ipState->task == PATH_HOP_EST) {
 
@@ -1342,7 +1436,7 @@ Scheduler::LBRegScan(IPState *ipState,
             ipState->task = PATH_ENUM_HOP;
 			addToQueue(Task(id, currTime));
 		} else if (msgType == CONTINUE) {
-			addToQueue(Task(id, currTime + UDP_FREEZE_TIME));
+			addToQueue(Task(id, currTime + freeze_time));
 		}
     } else if (ipState->task == PATH_ENUM_HOP_SIMPLE) {
 		msgType = pathEnumHop(id, ipState, 1, pkts);
@@ -1350,24 +1444,47 @@ Scheduler::LBRegScan(IPState *ipState,
             async(std::launch::async, logRes, id, ipState, OUT_FLOW_NO_LB, std::ref(outlist));            
             msgType = PROBE_END;
         } else if (msgType == CONTINUE) {
-			addToQueue(Task(id, currTime + UDP_FREEZE_TIME));
+			addToQueue(Task(id, currTime + freeze_time));
         }
 	} else if (ipState->task == PATH_ENUM_HOP) {
 		msgType = pathEnumHop(id, ipState, 6, pkts);
         if (msgType == DIFF_FWD_FLOW) {
             // per-packet load balancer
+            cout << formatOutput(id, 0, msgType, -1, {});
             async(std::launch::async, logRes, id, ipState, OUT_FWD_PKT_LB, std::ref(outlist));
             msgType = PROBE_END;
         } else if (msgType == DIFF_RVR_FLOW) {
+            cout << formatOutput(id, 0, msgType, -1, {});
             async(std::launch::async, logRes, id, ipState, OUT_RVR_PKT_LB, std::ref(outlist));
             msgType = PROBE_END;
         } else if (msgType == PHASE_DONE) {
             // write flows to files
             async(std::launch::async, logRes, id, ipState, OUT_FLOW_LB, std::ref(outlist));
-			msgType = PROBE_END;
+			ipState->task = UPDATE_MAP;
+            addToQueue(Task(id, currTime));
 		} else if (msgType == CONTINUE) {
-			addToQueue(Task(id, currTime + UDP_FREEZE_TIME));
+			addToQueue(Task(id, currTime + freeze_time));
         }
+    } else if (ipState->task == UPDATE_MAP) {
+        Graph graph;
+        vector<LBReg> lbRegs;
+        float totalRange;
+
+        // add source node
+        Hop source(0, 0);
+        // for not being considered as null when calculating
+        source.cnt = NUM_REPEAT;          
+        for (auto &f : ipState->flows) {
+            if (f.hops.size() > 0 && f.hops[0].fwdttl == 0)
+                continue;
+            f.hops.insert(f.hops.begin(), source);
+        }
+
+        lbRegs = graph.findLBReg(id, ipState->flows, &outlist);
+        totalRange = graph.calcLBRegDiff(ipState->flows, lbRegs);
+        cout << formatOutput(id, ipState->lastHopRouter, PROBE_END, totalRange, lbRegs);       
+
+        msgType = PROBE_END;
     }
 
     return msgType;
