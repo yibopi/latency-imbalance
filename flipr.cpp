@@ -161,11 +161,19 @@ main(int argc, char **argv) {
     cout << ">> Waiting " << SHUTDOWN_WAIT << "s for outstanding replies..." << endl;
     sleep(SHUTDOWN_WAIT);
 
-    int activeAddrProbed = trace->sch->summary.activeAddr; 
+    float totalImbl = 0;
+    for (auto &imbl : trace->sch->summary.imbls) {
+        totalImbl += imbl;
+    }
+    int activeAddrProbed = trace->sch->summary.imbls.size(); 
+    sort(trace->sch->summary.imbls.begin(), trace->sch->summary.imbls.end());
     cout << "Summary:" << endl;
     cout << "# addr probed:" << trace->sch->summary.totalAddrProbed << endl;
     cout << "# active addr:" << activeAddrProbed << endl;
-    cout << "Average latency imbalance:" << setprecision(1) << trace->sch->summary.totalImbl / (float)activeAddrProbed << endl;
+    if (trace->sch->summary.imbls.size() > 0) {
+        cout << "Median latency imbalance:" << setprecision(1) << trace->sch->summary.imbls[activeAddrProbed / 2] << endl;
+    }
+    cout << "Average latency imbalance:" << setprecision(1) << totalImbl / (float)activeAddrProbed << endl;
 
     /* Finished, cleanup */
 	// stats->terse();

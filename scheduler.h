@@ -169,12 +169,9 @@ struct IPState {
 
 struct Summary {
     int totalAddrProbed;
-    int activeAddr;
-    float totalImbl;
+    vector<float> imbls;
 
-    Summary(): totalAddrProbed(0),
-               activeAddr(0),
-               totalImbl(0) {}
+    Summary(): totalAddrProbed(0) {}
 };
 
 class Scheduler {

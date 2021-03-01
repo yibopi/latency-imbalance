@@ -1403,8 +1403,7 @@ Scheduler::LBRegScan(IPState *ipState,
             ipState->output += ss.str();
 
             if (maxRTT - minRTT >= 0) {
-                summary.totalImbl += maxRTT - minRTT;
-                summary.activeAddr += 1;
+                summary.imbls.push_back(maxRTT - minRTT);
             }
 
             async(std::launch::async, logRes, id, ipState, OUT_LATENCY, std::ref(outlist));
