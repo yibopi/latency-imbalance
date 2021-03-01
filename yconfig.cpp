@@ -106,7 +106,7 @@ YarrpConfig::parse_opts(int argc, char **argv) {
                 srcmac = read_mac(optarg);
                 break;
             case 'l':
-                lasthop = true;
+                lasthop = false;
                 break;
             case 't':
                 if (strcmp(optarg, "ICMP6") == 0) {

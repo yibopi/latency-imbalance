@@ -14,12 +14,12 @@ using namespace std;
 
 #define TCP_FREEZE_TIME 3
 #define ICMP_FREEZE_TIME 1
-#define UDP_FREEZE_TIME_SHORT 0.2
+#define UDP_FREEZE_TIME_SHORT 1
 #define UDP_FREEZE_TIME_LONG 3
 #define TIMEOUT MIN(TCP_FREEZE_TIME, MIN(UDP_FREEZE_TIME_LONG, ICMP_FREEZE_TIME))
 
-#define NUM_EXPLR_E2E 5 // std: 30
-#define NUM_REPEAT_E2E 6 // std: 6
+#define NUM_EXPLR_E2E 30 // std: 30
+#define NUM_REPEAT_E2E 3 // std: 6
 #define MAX_PROBES_SENT 90 // NUM_EXPLR_E2E + 10 * NUM_REPEAT_E2E
 #define NUM_PKTLB_EXPLR 6  // std: 6
 #define NUM_ALIAS_RESL 3   // 1000
@@ -31,9 +31,9 @@ using namespace std;
 #define NUM_FLOWS_E2E 2
 #define RANGE_THRES 0 // 6ms
 #define MEAS_ERROR 5 // 5ms
-#define MAX_HOPS 30
-#define NUM_TRIES_PER_HOP 3
-#define NUM_UNRESPONSIVE_HOPS 3
+#define MAX_HOPS 36
+#define NUM_TRIES_PER_HOP 1
+#define NUM_UNRESPONSIVE_HOPS 10
 
 //extern pthread_rwlock_t mapLock;
 //pthread_rwlock_t mapLock;
@@ -167,6 +167,16 @@ struct IPState {
                lastHopRouter(0) {}
 };
 
+struct Summary {
+    int totalAddrProbed;
+    int activeAddr;
+    float totalImbl;
+
+    Summary(): totalAddrProbed(0),
+               activeAddr(0),
+               totalImbl(0) {}
+};
+
 class Scheduler {
 public:
 	Scheduler(char *in, char *out, int _cap, bool lasthop, bool scan, bool fastmode);
@@ -208,6 +218,8 @@ public:
     bool inBlacklist(uint32_t &);
     void addToBlacklist(uint32_t &);
     void updateHistDB(uint32_t &, uint16_t &);
+
+    Summary summary;
 
 private:
     int cap;

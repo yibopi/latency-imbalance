@@ -135,9 +135,10 @@ main(int argc, char **argv) {
     trace->addStats(stats);
 
     cout << left << setw(20) << "Destination" 
-         << left << setw(30) << "Status" 
-         << left << setw(30) << "Latency Imbalance"
-         << left << setw(30) << "Imbalanced Regions (dvrg, cvrg, imbl, type)" << endl;
+         << left << setw(10) << "minRTT" 
+         << left << setw(10) << "maxRTT"
+         << left << setw(20) << "Imbalance(ms)"
+         << left << setw(30) << "Imbalanced Regions (dvrg, cvrg, imbalance)" << endl;
 
     if (config.inlist) {
         // Normal mode of operation, using individual IPs from input file -i
@@ -160,12 +161,18 @@ main(int argc, char **argv) {
     cout << ">> Waiting " << SHUTDOWN_WAIT << "s for outstanding replies..." << endl;
     sleep(SHUTDOWN_WAIT);
 
+    int activeAddrProbed = trace->sch->summary.activeAddr; 
+    cout << "Summary:" << endl;
+    cout << "# addr probed:" << trace->sch->summary.totalAddrProbed << endl;
+    cout << "# active addr:" << activeAddrProbed << endl;
+    cout << "Average latency imbalance:" << setprecision(1) << trace->sch->summary.totalImbl / (float)activeAddrProbed << endl;
+
     /* Finished, cleanup */
-	stats->terse();
+	// stats->terse();
     //if (config.output and not config.testing)
     //  stats->dump(trace->out);
     //else 
-    stats->dump(stdout);
+    // stats->dump(stdout);
     delete stats;
 	if (trace->sch) delete trace->sch;
     delete trace;
