@@ -137,8 +137,8 @@ main(int argc, char **argv) {
     cout << left << setw(20) << "Destination" 
          << left << setw(10) << "minRTT" 
          << left << setw(10) << "maxRTT"
-         << left << setw(20) << "Imbalance(ms)"
-         << left << setw(30) << "Imbalanced Regions (dvrg, cvrg, imbalance)" << endl;
+         << left << setw(20) << "Imbalance (ms)"
+         << left << setw(30) << "Imbalanced Regions (divergence, convergence)" << endl;
 
     if (config.inlist) {
         // Normal mode of operation, using individual IPs from input file -i

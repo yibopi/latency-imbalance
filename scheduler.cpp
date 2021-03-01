@@ -1510,8 +1510,7 @@ Scheduler::LBRegScan(IPState *ipState,
                 }
             }
 
-            ss << left << "(" << decToDot(lbRegs[ind].start.ip) << ", " << decToDot(lbRegs[ind].end.ip) << ", " 
-               << fixed << setprecision(1) << abs(lbRegs[ind].link.val) << ")";
+            ss << left << "(" << decToDot(lbRegs[ind].start.ip) << ", " << decToDot(lbRegs[ind].end.ip) << ")";
             ss << endl;
         } else {
             ss << "---------------" << endl;
