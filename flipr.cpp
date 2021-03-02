@@ -130,7 +130,8 @@ main(int argc, char **argv) {
         fatal("** Done (testing mode).");
 
     /* Begin work */
-    cout << ">> Probing begins." << endl;
+    cout << ">> Probing begins..." << endl;
+    trace->sch->summary.startTime = getCurrTime();
     Stats *stats = new Stats();
     trace->addStats(stats);
 
@@ -168,6 +169,7 @@ main(int argc, char **argv) {
     int activeAddrProbed = trace->sch->summary.imbls.size(); 
     sort(trace->sch->summary.imbls.begin(), trace->sch->summary.imbls.end());
     cout << "Summary:" << endl;
+    cout << "Elapsed time (s):" << getCurrTime() - trace->sch->summary.startTime << endl;
     cout << "# addr probed:" << trace->sch->summary.totalAddrProbed << endl;
     cout << "# active addr:" << activeAddrProbed << endl;
     if (trace->sch->summary.imbls.size() > 0) {

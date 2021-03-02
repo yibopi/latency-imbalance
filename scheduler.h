@@ -168,6 +168,7 @@ struct IPState {
 };
 
 struct Summary {
+    double startTime;
     int totalAddrProbed;
     vector<float> imbls;
 
