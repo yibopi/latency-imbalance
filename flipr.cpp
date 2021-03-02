@@ -171,6 +171,7 @@ main(int argc, char **argv) {
     cout << "# addr probed:" << trace->sch->summary.totalAddrProbed << endl;
     cout << "# active addr:" << activeAddrProbed << endl;
     if (trace->sch->summary.imbls.size() > 0) {
+        cout << "25-th percentile:" << setprecision(1) << trace->sch->summary.imbls[activeAddrProbed / 4] << endl;
         cout << "50-th percentile:" << setprecision(1) << trace->sch->summary.imbls[activeAddrProbed / 2] << endl;
         cout << "75-th percentile:" << setprecision(1) << trace->sch->summary.imbls[int(activeAddrProbed * 0.75)] << endl;
     }
