@@ -177,7 +177,7 @@ main(int argc, char **argv) {
         cout << "50-th percentile:" << setprecision(1) << trace->sch->summary.imbls[activeAddrProbed / 2] << endl;
         cout << "75-th percentile:" << setprecision(1) << trace->sch->summary.imbls[int(activeAddrProbed * 0.75)] << endl;
     }
-    cout << "Average latency imbalance:" << setprecision(1) << totalImbl / (float)activeAddrProbed << endl;
+    cout << "Mean:" << setprecision(1) << totalImbl / (float)activeAddrProbed << endl;
 
     /* Finished, cleanup */
 	// stats->terse();
